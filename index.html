@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WayGo</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+:root{--bg:#091629;--p:#0d1f38;--p2:#112a47;--b:#1e3a5f;--t:#e8f0fa;--m:#8aa0bd;--a:#4B9BFF;--g:#24D6A0;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:13px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:12px}
+h1{font-size:21px;font-weight:800;margin:0;letter-spacing:-.02em}h1 span:first-child{color:var(--a)}h1 span:last-child{color:var(--g)}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--m);margin:0 0 10px;font-weight:600}
+.card{background:linear-gradient(180deg,var(--p),var(--p2));border:1px solid var(--b);border-radius:14px;padding:14px}
+.top{display:grid;grid-template-columns:auto 2fr 2fr 130px auto;gap:8px;align-items:center;margin-bottom:10px}
+input[type=text],input[type=date]{background:var(--p);color:var(--t);border:1px solid var(--b);border-radius:9px;padding:7px 10px;width:100%;font:inherit}
+button{background:var(--a);color:#fff;border:0;border-radius:9px;padding:7px 14px;font:inherit;cursor:pointer}
+button.g{background:rgba(17,42,71,.8);color:var(--t);border:1px solid var(--b);padding:5px 10px}
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:12px}
+@media(max-width:900px){.grid,.top{grid-template-columns:1fr}}
+#map{height:560px;border-radius:12px;overflow:hidden}@media(max-width:900px){#map{height:420px}}
+.mw{position:relative}.dock{position:absolute;left:10px;right:10px;bottom:24px;background:rgba(9,22,41,.75);backdrop-filter:blur(10px);border:1px solid var(--b);border-radius:12px;padding:8px 10px;z-index:2}
+.dr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dr input[type=range]{flex:1;min-width:120px}
+#now{font-size:12px;margin-top:4px;color:#cdd2e3}
+select{background:var(--p2);color:var(--t);border:1px solid var(--b);border-radius:8px;padding:4px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:9px;background:linear-gradient(90deg,var(--a) var(--v,0%),var(--b) var(--v,0%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px var(--a),0 2px 8px rgba(0,0,0,.4)}
+input[type=range]::-moz-range-track{height:4px;border-radius:9px;background:var(--b)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:9px;background:var(--a)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 3px var(--a)}
+.pr{margin-bottom:8px}.pl{display:flex;justify-content:space-between;font-size:12px}.pl b{background:var(--bg);border:1px solid var(--b);border-radius:99px;padding:0 8px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--b)}th{cursor:pointer;color:var(--m);font-weight:500;white-space:nowrap}
+tbody tr{cursor:pointer}tbody tr:hover{background:rgba(75,155,255,.07)}tr.on{background:rgba(75,155,255,.16)}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--b);font-size:11px;margin:0 4px 4px 0}
+.tag{font-size:10px;padding:0 6px;border-radius:99px;border:1px solid;margin-left:4px;white-space:nowrap}
+.e{color:#f59e0b}.l{color:#38bdf8}.u{color:#f87171}.best{color:var(--g)}
+.leg{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--b);font-size:12px}.leg b{min-width:42px}
+details{margin-top:12px}summary{cursor:pointer;color:var(--m);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.bar2{height:4px;background:var(--b);border-radius:9px;overflow:hidden}.bar2 i{display:block;height:100%;background:var(--a)}
+.sf{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin:8px 0}
+small,.m{color:var(--m)}a{color:var(--a)}p{margin:6px 0}
+.mk{width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 0 0 6px rgba(75,155,255,.45),0 2px 10px #000}
+.lb{background:rgba(9,22,41,.85);color:#e8f0fa;border:1px solid #1e3a5f;border-radius:99px;padding:1px 8px;font-size:11px;white-space:nowrap;transform:translateY(-14px)}
+</style></head><body><div class="wrap">
+<div class="top"><h1><span>Way</span><span>Go</span></h1>
+<input type="text" id="o" value="640 Trails End Cir, Bonaire, GA 31005" aria-label="Origin">
+<input type="text" id="d" value="12240 Meadows Ln, Alpharetta, GA 30005" aria-label="Destination">
+<input type="date" id="dt" value="2026-11-26" aria-label="Date"><button id="go">Search</button></div>
+<div class="grid"><div class="card" style="padding:10px"><div class="mw"><div id="map"></div>
+<div class="dock"><div class="dr"><button id="pl">Play</button><button class="g" id="rs">↺</button>
+<select id="sp"><option value="1">1x</option><option value="4">4x</option><option value="12" selected>12x</option><option value="30">30x</option></select>
+<label class="m"><input type="checkbox" id="fo" checked> Follow</label><input type="range" id="tl" min="0" max="1000" value="0" style="--v:0%"></div><div id="now"></div></div></div>
+<small id="st" style="display:block;margin-top:6px"></small></div>
+<div><div class="card"><h2>Priorities</h2><div id="w"></div></div>
+<div class="card" style="margin-top:12px"><h2>Routes <span style="color:#f59e0b;text-transform:none;letter-spacing:0;margin-left:6px">Estimates only</span></h2><div style="overflow-x:auto"><table id="tb"></table></div></div></div></div>
+<div class="card" style="margin-top:12px"><h2 id="dh">Selected route</h2><div id="det"></div>
+<details><summary>Safety methodology &amp; rider reviews</summary><div id="sf"></div></details>
+<details><summary>Sources</summary><div id="src"></div></details></div></div>
+<script>
+/* ---------- Data ---------- */
+const N={O:{n:'Origin',c:[-83.596,32.546],q:'640 Trails End Cir, Bonaire, GA 31005'},M:{n:'Macon Bus Station',c:[-83.6268,32.8387],q:'200 Cherry St, Macon, GA 31201'},G:{n:'Atlanta Greyhound / Garnett',c:[-84.3964,33.7478]},S:{n:'MARTA North Springs',c:[-84.357,33.945]},D:{n:'Destination',c:[-84.25,34.08],q:'12240 Meadows Ln, Alpharetta, GA 30005'}};
+const RED=[[-84.3964,33.7478],[-84.3915,33.754],[-84.3877,33.7597],[-84.3875,33.7662],[-84.3874,33.7717],[-84.3866,33.7813],[-84.3871,33.7893],[-84.3694,33.823],[-84.3674,33.8478],[-84.3513,33.9107],[-84.3445,33.9209],[-84.3513,33.9327],[-84.357,33.945]];
+const ROAD={OM:['O','M'],MG:['M','G'],GD:['G','D'],SD:['S','D'],OD:['O','D']};
+const C={ride:'#a78bfa',bus:'#f59e0b',train:'#38bdf8',rental:'#24D6A0',walk:'#9ca3af',wait:'#6b7280'};
+const L={ride:'Uber/Lyft',bus:'Bus',train:'MARTA',rental:'Rental',walk:'Walk',wait:'Wait'};
+const RV={
+mac:{s:60,t:'Macon terminal: reviewers like the historic building but call the stop bare-bones, and some report being refused restroom access. Greyhound lists ticketing 6 AM to 11 PM.',u:'https://wanderlog.com/place/details/10831331/macon-bibb-county-transit-authority-and-macon-terminal-station'},
+atl:{s:35,t:'Atlanta Greyhound terminal beside Garnett: travelers cite cleanliness and safety complaints and advise caution at night, though guards are on site.',u:'https://www.busbud.com/en/downtown-greyhound-station/s/1916'},
+marta:{s:40,t:'MARTA: in June 2026 the AJC reported federal scrutiny of MARTA security after several violent incidents.',u:'https://www.ajc.com/video/news/2026/06/is-marta-safe-what-riders-across-atlanta-say/'},
+ride:{s:55,t:'Rideshare: a 2026 survey of 1,000 women (advocacy-commissioned online panel) found about 59% had felt unsafe at least once. Uber and Lyft offer women-driver matching, trip sharing and driver verification.',u:'https://knsiradio.com/?p=834070'}};
+const R=[
+{id:'r1',name:'Rideshare door to door',start:720,walkM:50,rv:['ride'],seg:[['wait','O',10],['ride','O','D',110,180,300,'e','Uber/Lyft, ~105 mi','OD']],sf:[85,80,100,95,70,50,85],why:'Door pickup, no transfers, daytime. Rural pickup availability on a holiday is unknown.'},
+{id:'r2',name:'Rideshare + bus + MARTA + rideshare',start:775,walkM:150,rv:['ride','mac','atl','marta'],seg:[['ride','O','M',25,25,40,'e','Uber/Lyft to Macon station','OM'],['wait','M',20],['bus','M','G',105,19,41,'l','Greyhound 1:40 PM listing, unverified for Nov 26','MG'],['walk','G','G',3,0,0,'u','Terminal is next to Garnett station'],['wait','G',15],['train','G','S',35,2.5,2.5,'l','MARTA Red Line (Sunday schedule assumed)','GS'],['wait','S',10],['ride','S','D',20,20,35,'e','Uber/Lyft to destination','SD']],sf:[45,65,35,70,65,45,60],why:'Three waits and three transfers, two in unfamiliar urban stations.'},
+{id:'r3',name:'Rideshare + bus + rideshare',start:775,walkM:100,rv:['ride','mac','atl'],seg:[['ride','O','M',25,25,40,'e','Uber/Lyft to Macon station','OM'],['wait','M',20],['bus','M','G',105,19,41,'l','Greyhound 1:40 PM listing, unverified for Nov 26','MG'],['wait','G',10],['ride','G','D',50,50,90,'e','Uber/Lyft Atlanta to Alpharetta','GD']],sf:[55,65,60,75,70,45,70],why:'One transfer. Waiting at the bus stop is the main exposure; the last leg reaches the door.'},
+{id:'r4',name:'One-way rental car',start:720,walkM:100,rv:[],seg:[['wait','O',30],['rental','O','D',110,105,260,'u','Provider, location and one-way fee unverified','OD']],sf:[90,80,95,90,60,60,40],why:'No transfers or strangers, but a solo 105-mile drive in an unfamiliar area; holiday counter hours unknown.'},
+{id:'r5',name:'Late bus 10:25 PM + rideshare',start:1315,walkM:100,rv:['ride','mac','atl'],rvAdj:-10,seg:[['ride','O','M',25,25,40,'e','Uber/Lyft to Macon station','OM'],['wait','M',5],['bus','M','G',80,14,34,'l','FlixBus 10:25 PM listing, unverified','MG'],['wait','G',10],['ride','G','D',50,55,95,'e','Late-night Uber/Lyft','GD']],sf:[30,25,60,70,70,35,70],why:'Arrives about 11:45 PM and ends after midnight, so it misses Nov 26. Not recommended.'}];
+const SW=[['Waiting conditions',20],['Time of travel',15],['Transfers',15],['Walking exposure',15],['Provider accountability',15],['Staffed facilities',10],['Tracking & emergency',10]];
+const fm=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+R.forEach(r=>{let t=r.start,lo=0,hi=0;r.legs=r.seg.map(s=>{const g=s[0]==='wait'?{mode:'wait',a:s[1],b:s[1],dur:s[2],lo:0,hi:0,label:'Waiting at '+N[s[1]].n}:{mode:s[0],a:s[1],b:s[2],dur:s[3],lo:s[4],hi:s[5],conf:s[6],label:s[7],p:s[8]};g.s=t;t+=g.dur;g.e=t;lo+=g.lo;hi+=g.hi;return g});
+r.end=t;r.dur=t-r.start;r.lo=lo;r.hi=hi;r.mid=(lo+hi)/2;r.tr=r.legs.filter(g=>g.mode!=='wait'&&g.mode!=='walk').length-1;r.wait=r.legs.filter(g=>g.mode==='wait').reduce((a,g)=>a+g.dur,0);
+r.st=Math.round(r.sf.reduce((a,v,i)=>a+v*SW[i][1],0)/100);
+r.rs=r.rv.length?Math.max(0,Math.round(r.rv.reduce((a,k)=>a+RV[k].s,0)/r.rv.length+(r.rvAdj||0))):null;
+r.safe=r.rs===null?r.st:Math.round(.75*r.st+.25*r.rs)});
+const wt={cost:5,safety:8,time:4,transfers:5,conv:3};let sel=R[2],T=0,play=0,sort=['score',-1],last=0;
+const $=id=>document.getElementById(id);
+const norm=(v,f,inv)=>{const a=R.map(f),mn=Math.min(...a),mx=Math.max(...a);return mx===mn?1:(inv?(mx-v)/(mx-mn):(v-mn)/(mx-mn))};
+function score(){const s=Object.values(wt).reduce((a,b)=>a+b,0)||1;R.forEach(r=>{r.score=Math.round(100*(wt.cost*norm(r.mid,x=>x.mid,1)+wt.safety*norm(r.safe,x=>x.safe)+wt.time*norm(r.dur,x=>x.dur,1)+wt.transfers*norm(r.tr,x=>x.tr,1)+wt.conv*(.5*norm(r.walkM,x=>x.walkM,1)+.5*norm(r.wait,x=>x.wait,1)))/s)})}
+/* ---------- Geo ---------- */
+const PC={};
+async function geocode(q){try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));const j=await r.json();if(j[0])return[+j[0].lon,+j[0].lat]}catch(e){}return null}
+async function road(a,b){try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a[0]},${a[1]};${b[0]},${b[1]}?overview=full&geometries=geojson`);const j=await r.json();if(j.routes&&j.routes[0])return{c:j.routes[0].geometry.coordinates,real:true}}catch(e){}return{c:[a,b],real:false}}
+async function path(k){if(PC[k])return PC[k];if(k==='GS')return PC[k]={c:RED,real:false,rail:true};const[a,b]=ROAD[k];return PC[k]=await road(N[a].c,N[b].c)}
+const hv=(p,q)=>{const R_=6371,r=Math.PI/180,dl=(q[1]-p[1])*r,dn=(q[0]-p[0])*r,a=Math.sin(dl/2)**2+Math.cos(p[1]*r)*Math.cos(q[1]*r)*Math.sin(dn/2)**2;return 2*R_*Math.asin(Math.sqrt(a))};
+function prep(p){if(p.cum)return;p.cum=[0];for(let i=1;i<p.c.length;i++)p.cum.push(p.cum[i-1]+hv(p.c[i-1],p.c[i]))}
+function along(p,f){prep(p);const d=f*p.cum[p.cum.length-1];let i=1;while(i<p.cum.length-1&&p.cum[i]<d)i++;const s=p.cum[i]-p.cum[i-1]||1,u=Math.min(1,Math.max(0,(d-p.cum[i-1])/s));return[p.c[i-1][0]+(p.c[i][0]-p.c[i-1][0])*u,p.c[i-1][1]+(p.c[i][1]-p.c[i-1][1])*u]}
+/* ---------- Map ---------- */
+const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-84,33.45],zoom:8,pitch:60,bearing:-10,maxPitch:80});
+map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'top-right');
+const mkEl=document.createElement('div');mkEl.className='mk';const mkr=new maplibregl.Marker({element:mkEl});let nodeMk=[],ready=false;
+map.on('load',()=>{
+ if(!map.getStyle().layers.some(l=>l.type==='fill-extrusion')){map.addLayer({id:'wg-3d',type:'fill-extrusion',source:'openmaptiles','source-layer':'building',minzoom:14,paint:{'fill-extrusion-color':'#c9d3e3','fill-extrusion-height':['coalesce',['get','render_height'],10],'fill-extrusion-base':['coalesce',['get','render_min_height'],0],'fill-extrusion-opacity':.9}})}
+ map.addSource('rt',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+ map.addLayer({id:'rt-glow',type:'line',source:'rt',paint:{'line-color':['get','col'],'line-width':14,'line-opacity':.25,'line-blur':6},layout:{'line-cap':'round','line-join':'round'}});
+ map.addLayer({id:'rt-line',type:'line',source:'rt',paint:{'line-color':['get','col'],'line-width':5},layout:{'line-cap':'round','line-join':'round'}});
+ ready=true;pick(sel)});
+async function build(){if(!ready)return;$('st').textContent='Loading road geometry…';
+ const keys=[...new Set(sel.legs.filter(g=>g.p).map(g=>g.p))];await Promise.all(keys.map(path));
+ const f=[],bb=new maplibregl.LngLatBounds();
+ sel.legs.forEach(g=>{g.pp=g.p?PC[g.p]:null;if(g.pp)g.pp.c.forEach(c=>bb.extend(c));if(g.pp)f.push({type:'Feature',properties:{col:C[g.mode]},geometry:{type:'LineString',coordinates:g.pp.c}})});
+ map.getSource('rt').setData({type:'FeatureCollection',features:f});
+ nodeMk.forEach(m=>m.remove());nodeMk=[];new Set(sel.legs.flatMap(g=>[g.a,g.b])).forEach(k=>{const e=document.createElement('div');e.className='lb';e.textContent=N[k].n;nodeMk.push(new maplibregl.Marker({element:e,anchor:'bottom'}).setLngLat(N[k].c).addTo(map))});
+ mkr.setLngLat(N[sel.legs[0].a].c).addTo(map);map.fitBounds(bb,{padding:{top:60,bottom:150,left:60,right:60},pitch:60,duration:1200});
+ const real=keys.filter(k=>k!=='GS').every(k=>PC[k].real);$('st').textContent=real?'Road geometry: OpenStreetMap via OSRM. MARTA line is drawn station to station.':'Some road geometry could not be fetched and is drawn as straight lines.';frame()}
+function frame(){const t=sel.start+T*sel.dur;const g=sel.legs.find(x=>t>=x.s&&t<x.e)||sel.legs[sel.legs.length-1];const f=Math.min(1,Math.max(0,(t-g.s)/g.dur));
+ if(ready&&g){const p=g.pp?along(g.pp,f):N[g.a].c;mkr.setLngLat(p);if(play&&$('fo').checked)map.jumpTo({center:p,zoom:Math.max(map.getZoom(),11),pitch:62})}
+ let c=0;sel.legs.forEach(l=>{c+=(l.lo+l.hi)/2*Math.min(1,Math.max(0,(t-l.s)/l.dur))});
+ $('now').innerHTML=`<b style="color:${C[g.mode]}">${L[g.mode]}</b> ${g.label}<br><small>${fm(t)} illustrative · ${Math.round(sel.end-t)} min left · ~$${c.toFixed(0)} of $${sel.lo.toFixed(0)}–${sel.hi.toFixed(0)} (est.)</small>`;$('tl').value=Math.round(T*1000);$('tl').style.setProperty('--v',T*100+'%')}
+(function loop(ts){if(play){T+=(ts-last)/1000*(+$('sp').value)/sel.dur;if(T>=1){T=1;play=0;$('pl').textContent='Play'}frame()}last=ts;requestAnimationFrame(loop)})(0);
+/* ---------- UI ---------- */
+const tg_=c=>c==='l'?'<span class="tag l">listed fare</span>':c==='u'?'<span class="tag u">unverified</span>':'<span class="tag e">estimate</span>';
+function refresh(){score();const top=R.slice().sort((a,b)=>b.score-a.score)[0];
+ const H=[['name','Route'],['mid','Price'],['dur','Time'],['safe','Safety'],['tr','Xfers'],['score','Match']];
+ const rows=R.slice().sort((a,b)=>(typeof a[sort[0]]==='string'?a[sort[0]].localeCompare(b[sort[0]]):a[sort[0]]-b[sort[0]])*sort[1]);
+ $('tb').innerHTML='<thead><tr>'+H.map(h=>`<th data-s="${h[0]}">${h[1]}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>`<tr data-r="${r.id}" class="${r===sel?'on':''}"><td>${r.name}${r===top?'<span class="tag best">best match</span>':''}</td><td>$${r.lo.toFixed(0)}–${r.hi.toFixed(0)}</td><td>${Math.floor(r.dur/60)}h${String(r.dur%60).padStart(2,'0')}</td><td>${r.safe}</td><td>${r.tr}</td><td>${r.score}</td></tr>`).join('')+'</tbody>';
+ document.querySelectorAll('th').forEach(t=>t.onclick=()=>{sort=[t.dataset.s,sort[0]===t.dataset.s?-sort[1]:1];refresh()});
+ document.querySelectorAll('tr[data-r]').forEach(e=>e.onclick=()=>pick(R.find(r=>r.id===e.dataset.r)));
+ $('dh').textContent=sel.name;
+ $('det').innerHTML=`<span class="pill">$${sel.lo.toFixed(0)}–${sel.hi.toFixed(0)} est.</span><span class="pill">${fm(sel.start)}–${fm(sel.end)} illustrative</span><span class="pill">Safety ${sel.safe}/100</span><span class="pill">Walking ~${sel.walkM} m</span><span class="pill">Waiting ${sel.wait} min</span>`+sel.legs.map(g=>`<div class="leg"><b>${fm(g.s)}</b><span style="color:${C[g.mode]};min-width:52px">${L[g.mode]}</span><span>${g.label}${g.hi?` <small>$${g.lo}–${g.hi}</small>`:''}${g.mode==='wait'?'':tg_(g.conf)}</span></div>`).join('')+'<p><small>Book directly: <a href="https://www.greyhound.com/bus-routes/macon-ga-atlanta-ga" target="_blank" rel="noopener">Greyhound</a> · <a href="https://www.flixbus.com/bus-routes/bus-macon-ga-atlanta-ga" target="_blank" rel="noopener">FlixBus</a> · <a href="https://itsmarta.com/holiday-operating-schedule.aspx" target="_blank" rel="noopener">MARTA holidays</a> · Uber and Lyft apps</small></p>';
+ $('sf').innerHTML=`<p class="m">Safety ${sel.safe} = 75% structural score (${sel.st}, seven weighted criteria) + 25% rider-review signal (${sel.rs===null?'no review data; structural score used alone':sel.rs}). It is not a guarantee of safety, and no official crime statistics are included.</p><div class="sf">`+SW.map((c,i)=>`<div><small>${c[0]} · ${c[1]}% · ${sel.sf[i]}</small><div class="bar2"><i style="width:${sel.sf[i]}%"></i></div></div>`).join('')+`</div><p>${sel.why}</p>`+(sel.rv.length?sel.rv.map(k=>`<p><small><b>${RV[k].s}/100</b> · ${RV[k].t} <a href="${RV[k].u}" target="_blank" rel="noopener">source</a></small></p>`).join(''):'<p><small>Driving yourself has no comparable rider reviews.</small></p>')+(sel.rvAdj?'<p><small>Reviews score lowered 10 points for late-night travel.</small></p>':'')+'<p><small>Reviews are subjective, small-sample and sometimes dated.</small></p>'}
+function pick(r){sel=r;T=0;play=0;$('pl').textContent='Play';refresh();build()}
+$('w').innerHTML=[['cost','Cost'],['safety','Safety'],['time','Travel time'],['transfers','Fewer transfers'],['conv','Convenience']].map(([k,n])=>`<div class="pr"><div class="pl"><span>${n}</span><b id="v_${k}">${wt[k]}</b></div><input type="range" min="0" max="10" value="${wt[k]}" data-k="${k}" style="--v:${wt[k]*10}%" aria-label="${n}"></div>`).join('');
+document.querySelectorAll('#w input').forEach(i=>i.oninput=e=>{const k=e.target.dataset.k;wt[k]=+e.target.value;e.target.style.setProperty('--v',wt[k]*10+'%');$('v_'+k).textContent=wt[k];refresh()});
+$('src').innerHTML=[['Greyhound Macon–Atlanta','https://www.greyhound.com/bus-routes/macon-ga-atlanta-ga','1:40 PM and 10:25 PM listings, fares from $18.98; not verified for Nov 26.'],['MARTA holiday schedule','https://itsmarta.com/holiday-operating-schedule.aspx','Shows 2024 only (Sunday service on Thanksgiving); 2026 unverified.'],['Map data','https://openfreemap.org','OpenFreeMap tiles, OpenStreetMap contributors; routing by the public OSRM demo server; addresses by Nominatim.']].map(s=>`<p><small><a href="${s[1]}" target="_blank" rel="noopener">${s[0]}</a>: ${s[2]}</small></p>`).join('')+'<p><small>Uber, Lyft and rental prices were not queried; ranges are rough per-mile estimates. Amtrak, Groome, other shuttles and crime data are not covered.</small></p>';
+$('pl').onclick=()=>{if(T>=1)T=0;play=!play;$('pl').textContent=play?'Pause':'Play'};
+$('rs').onclick=()=>{T=0;play=0;$('pl').textContent='Play';frame()};
+$('tl').oninput=e=>{T=e.target.value/1000;play=0;$('pl').textContent='Play';frame()};
+$('go').onclick=async()=>{$('st').textContent='Looking up addresses…';const[o,d]=await Promise.all([geocode($('o').value),geocode($('d').value)]);if(o)N.O.c=o;if(d)N.D.c=d;for(const k in PC)if(k!=='GS')delete PC[k];$('st').textContent=(o&&d)?'Addresses found. Only the Macon → Atlanta corridor is researched, so other trips are not meaningful.':'Address lookup failed; keeping previous locations.';pick(sel)};
+/* geocode the default addresses once for exact points */
+(async()=>{for(const k of ['O','M','D']){const c=await geocode(N[k].q||$(k==='O'?'o':'d').value);if(c)N[k].c=c}for(const k in PC)if(k!=='GS')delete PC[k];if(ready)build()})();
+refresh();
+</script></body></html>
