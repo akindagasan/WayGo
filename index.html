@@ -76,19 +76,19 @@ const R=[
 {id:'r5',name:'Late bus 10:25 PM + rideshare',start:1315,walkM:100,rv:['ride','mac','atl'],rvAdj:-10,seg:[['ride','O','M',25,25,40,'e','Uber/Lyft to Macon station','OM'],['wait','M',5],['bus','M','G',80,14,34,'l','FlixBus 10:25 PM listing, unverified','MG'],['wait','G',10],['ride','G','D',50,55,95,'e','Late-night Uber/Lyft','GD']],sf:[30,25,60,70,70,35,70],why:'Arrives about 11:45 PM and ends after midnight, so it misses Nov 26. Not recommended.'}];
 const SW=[['Waiting conditions',20],['Time of travel',15],['Transfers',15],['Walking exposure',15],['Provider accountability',15],['Staffed facilities',10],['Tracking & emergency',10]];
 const fm=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
-R.forEach(r=>{let t=r.start,lo=0,hi=0;r.legs=r.seg.map(s=>{const g=s[0]==='wait'?{mode:'wait',a:s[1],b:s[1],dur:s[2],lo:0,hi:0,label:'Waiting at '+N[s[1]].n}:{mode:s[0],a:s[1],b:s[2],dur:s[3],lo:s[4],hi:s[5],conf:s[6],label:s[7],p:s[8]};g.s=t;t+=g.dur;g.e=t;lo+=g.lo;hi+=g.hi;return g});
+const calc=r=>{let t=r.start,lo=0,hi=0;r.legs=r.seg.map(s=>{const g=s[0]==='wait'?{mode:'wait',a:s[1],b:s[1],dur:s[2],lo:0,hi:0,label:'Waiting at '+N[s[1]].n}:{mode:s[0],a:s[1],b:s[2],dur:s[3],lo:s[4],hi:s[5],conf:s[6],label:s[7],p:s[8]};g.s=t;t+=g.dur;g.e=t;lo+=g.lo;hi+=g.hi;return g});
 r.end=t;r.dur=t-r.start;r.lo=lo;r.hi=hi;r.mid=(lo+hi)/2;r.tr=r.legs.filter(g=>g.mode!=='wait'&&g.mode!=='walk').length-1;r.wait=r.legs.filter(g=>g.mode==='wait').reduce((a,g)=>a+g.dur,0);
 r.st=Math.round(r.sf.reduce((a,v,i)=>a+v*SW[i][1],0)/100);
 r.rs=r.rv.length?Math.max(0,Math.round(r.rv.reduce((a,k)=>a+RV[k].s,0)/r.rv.length+(r.rvAdj||0))):null;
-r.safe=r.rs===null?r.st:Math.round(.75*r.st+.25*r.rs)});
+r.safe=r.rs===null?r.st:Math.round(.75*r.st+.25*r.rs)};R.forEach(calc);let AV=[],note='';
 const wt={cost:5,safety:8,time:4,transfers:5,conv:3};let sel=R[2],T=0,play=0,sort=['score',-1],last=0;
 const $=id=>document.getElementById(id);
-const norm=(v,f,inv)=>{const a=R.map(f),mn=Math.min(...a),mx=Math.max(...a);return mx===mn?1:(inv?(mx-v)/(mx-mn):(v-mn)/(mx-mn))};
-function score(){const s=Object.values(wt).reduce((a,b)=>a+b,0)||1;R.forEach(r=>{r.score=Math.round(100*(wt.cost*norm(r.mid,x=>x.mid,1)+wt.safety*norm(r.safe,x=>x.safe)+wt.time*norm(r.dur,x=>x.dur,1)+wt.transfers*norm(r.tr,x=>x.tr,1)+wt.conv*(.5*norm(r.walkM,x=>x.walkM,1)+.5*norm(r.wait,x=>x.wait,1)))/s)})}
+const norm=(v,f,inv)=>{const a=AV.map(f),mn=Math.min(...a),mx=Math.max(...a);return mx===mn?1:(inv?(mx-v)/(mx-mn):(v-mn)/(mx-mn))};
+function score(){const s=Object.values(wt).reduce((a,b)=>a+b,0)||1;AV.forEach(r=>{r.score=Math.round(100*(wt.cost*norm(r.mid,x=>x.mid,1)+wt.safety*norm(r.safe,x=>x.safe)+wt.time*norm(r.dur,x=>x.dur,1)+wt.transfers*norm(r.tr,x=>x.tr,1)+wt.conv*(.5*norm(r.walkM,x=>x.walkM,1)+.5*norm(r.wait,x=>x.wait,1)))/s)})}
 /* ---------- Geo ---------- */
 const PC={};let ex=false;
 async function geocode(q){try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));const j=await r.json();if(j[0])return[+j[0].lon,+j[0].lat]}catch(e){}return null}
-async function road(a,b){try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a[0]},${a[1]};${b[0]},${b[1]}?overview=full&geometries=geojson`);const j=await r.json();if(j.routes&&j.routes[0])return{c:j.routes[0].geometry.coordinates,real:true}}catch(e){}return{c:[a,b],real:false}}
+async function road(a,b){try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a[0]},${a[1]};${b[0]},${b[1]}?overview=full&geometries=geojson`);const j=await r.json();if(j.routes&&j.routes[0])return{c:j.routes[0].geometry.coordinates,real:true,dur:j.routes[0].duration/60,km:j.routes[0].distance/1000}}catch(e){}return{c:[a,b],real:false}}
 async function path(k){if(PC[k])return PC[k];if(k==='GS')return PC[k]={c:RED,real:false,rail:true};const[a,b]=ROAD[k];return PC[k]=await road(N[a].c,N[b].c)}
 const hv=(p,q)=>{const R_=6371,r=Math.PI/180,dl=(q[1]-p[1])*r,dn=(q[0]-p[0])*r,a=Math.sin(dl/2)**2+Math.cos(p[1]*r)*Math.cos(q[1]*r)*Math.sin(dn/2)**2;return 2*R_*Math.asin(Math.sqrt(a))};
 function prep(p){if(p.cum)return;p.cum=[0];for(let i=1;i<p.c.length;i++)p.cum.push(p.cum[i-1]+hv(p.c[i-1],p.c[i]))}
@@ -102,7 +102,7 @@ map.on('load',()=>{
  map.addSource('rt',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
  map.addLayer({id:'rt-glow',type:'line',source:'rt',paint:{'line-color':['get','col'],'line-width':14,'line-opacity':.25,'line-blur':6},layout:{'line-cap':'round','line-join':'round'}});
  map.addLayer({id:'rt-line',type:'line',source:'rt',paint:{'line-color':['get','col'],'line-width':5},layout:{'line-cap':'round','line-join':'round'}});
- ready=true;pick(sel)});
+ ready=true});
 async function build(){if(!ready)return;$('st').textContent='Loading road geometry…';
  const keys=[...new Set(sel.legs.filter(g=>g.p).map(g=>g.p))];await Promise.all(keys.map(path));
  const f=[],bb=new maplibregl.LngLatBounds();
@@ -110,17 +110,17 @@ async function build(){if(!ready)return;$('st').textContent='Loading road geomet
  map.getSource('rt').setData({type:'FeatureCollection',features:f});
  nodeMk.forEach(m=>m.remove());nodeMk=[];new Set(sel.legs.flatMap(g=>[g.a,g.b])).forEach(k=>{const e=document.createElement('div');e.className='lb';e.textContent=N[k].n;nodeMk.push(new maplibregl.Marker({element:e,anchor:'bottom'}).setLngLat(N[k].c).addTo(map))});
  mkr.setLngLat(N[sel.legs[0].a].c).addTo(map);map.fitBounds(bb,{padding:{top:60,bottom:150,left:60,right:60},pitch:60,duration:1200});
- const real=keys.filter(k=>k!=='GS').every(k=>PC[k].real);$('st').textContent=(ex?'':'Start and end are approximate (town level): enter addresses and press Search. ')+(real?'Road geometry: OpenStreetMap via OSRM. MARTA line is drawn station to station.':'Some road geometry could not be fetched and is drawn as straight lines.');frame()}
-function frame(){const t=sel.start+T*sel.dur;const g=sel.legs.find(x=>t>=x.s&&t<x.e)||sel.legs[sel.legs.length-1];const f=Math.min(1,Math.max(0,(t-g.s)/g.dur));
+ const real=keys.filter(k=>k!=='GS').every(k=>PC[k].real);$('st').textContent=note+(ex?'':'Start and end are approximate (town level): enter addresses and press Search. ')+(real?'Road geometry: OpenStreetMap via OSRM. MARTA line is drawn station to station.':'Some road geometry could not be fetched and is drawn as straight lines.');frame()}
+function frame(){if(!AV.length)return;const t=sel.start+T*sel.dur;const g=sel.legs.find(x=>t>=x.s&&t<x.e)||sel.legs[sel.legs.length-1];const f=Math.min(1,Math.max(0,(t-g.s)/g.dur));
  if(ready&&g){const p=g.pp?along(g.pp,f):N[g.a].c;mkr.setLngLat(p);if(play&&$('fo').checked)map.jumpTo({center:p,zoom:Math.max(map.getZoom(),11),pitch:62})}
  let c=0;sel.legs.forEach(l=>{c+=(l.lo+l.hi)/2*Math.min(1,Math.max(0,(t-l.s)/l.dur))});
  $('now').innerHTML=`<b style="color:${C[g.mode]}">${L[g.mode]}</b> ${g.label}<br><small>${fm(t)} illustrative · ${Math.round(sel.end-t)} min left · ~$${c.toFixed(0)} of $${sel.lo.toFixed(0)}–${sel.hi.toFixed(0)} (est.)</small>`;$('tl').value=Math.round(T*1000);$('tl').style.setProperty('--v',T*100+'%')}
 (function loop(ts){if(play){T+=(ts-last)/1000*(+$('sp').value)/sel.dur;if(T>=1){T=1;play=0;$('pl').textContent='Play'}frame()}last=ts;requestAnimationFrame(loop)})(0);
 /* ---------- UI ---------- */
 const tg_=c=>c==='l'?'<span class="tag l">listed fare</span>':c==='u'?'<span class="tag u">unverified</span>':'<span class="tag e">estimate</span>';
-function refresh(){score();const top=R.slice().sort((a,b)=>b.score-a.score)[0];
+function refresh(){if(!AV.length){$('tb').innerHTML='<tbody><tr><td class="m">Enter an origin and a destination, then press Search.</td></tr></tbody>';$('dh').textContent='Selected route';$('det').innerHTML='';$('sf').innerHTML='';return}score();const top=AV.slice().sort((a,b)=>b.score-a.score)[0];
  const H=[['name','Route'],['mid','Price'],['dur','Time'],['safe','Safety'],['tr','Xfers'],['score','Match']];
- const rows=R.slice().sort((a,b)=>(typeof a[sort[0]]==='string'?a[sort[0]].localeCompare(b[sort[0]]):a[sort[0]]-b[sort[0]])*sort[1]);
+ const rows=AV.slice().sort((a,b)=>(typeof a[sort[0]]==='string'?a[sort[0]].localeCompare(b[sort[0]]):a[sort[0]]-b[sort[0]])*sort[1]);
  $('tb').innerHTML='<thead><tr>'+H.map(h=>`<th data-s="${h[0]}">${h[1]}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>`<tr data-r="${r.id}" class="${r===sel?'on':''}"><td>${r.name}${r===top?'<span class="tag best">best match</span>':''}</td><td>$${r.lo.toFixed(0)}–${r.hi.toFixed(0)}</td><td>${Math.floor(r.dur/60)}h${String(r.dur%60).padStart(2,'0')}</td><td>${r.safe}</td><td>${r.tr}</td><td>${r.score}</td></tr>`).join('')+'</tbody>';
  document.querySelectorAll('th').forEach(t=>t.onclick=()=>{sort=[t.dataset.s,sort[0]===t.dataset.s?-sort[1]:1];refresh()});
  document.querySelectorAll('tr[data-r]').forEach(e=>e.onclick=()=>pick(R.find(r=>r.id===e.dataset.r)));
@@ -131,11 +131,24 @@ function pick(r){sel=r;T=0;play=0;$('pl').textContent='Play';refresh();build()}
 $('w').innerHTML=[['cost','Cost'],['safety','Safety'],['time','Travel time'],['transfers','Fewer transfers'],['conv','Convenience']].map(([k,n])=>`<div class="pr"><div class="pl"><span>${n}</span><b id="v_${k}">${wt[k]}</b></div><input type="range" min="0" max="10" value="${wt[k]}" data-k="${k}" style="--v:${wt[k]*10}%" aria-label="${n}"></div>`).join('');
 document.querySelectorAll('#w input').forEach(i=>i.oninput=e=>{const k=e.target.dataset.k;wt[k]=+e.target.value;e.target.style.setProperty('--v',wt[k]*10+'%');$('v_'+k).textContent=wt[k];refresh()});
 $('src').innerHTML=[['Greyhound Macon–Atlanta','https://www.greyhound.com/bus-routes/macon-ga-atlanta-ga','1:40 PM and 10:25 PM listings, fares from $18.98; not verified for Nov 26.'],['MARTA holiday schedule','https://itsmarta.com/holiday-operating-schedule.aspx','Shows 2024 only (Sunday service on Thanksgiving); 2026 unverified.'],['Map data','https://openfreemap.org','OpenFreeMap tiles, OpenStreetMap contributors; routing by the public OSRM demo server; addresses by Nominatim.']].map(s=>`<p><small><a href="${s[1]}" target="_blank" rel="noopener">${s[0]}</a>: ${s[2]}</small></p>`).join('')+'<p><small>Uber, Lyft and rental prices were not queried; ranges are rough per-mile estimates. Amtrak, Groome, other shuttles and crime data are not covered.</small></p>';
-$('pl').onclick=()=>{if(T>=1)T=0;play=!play;$('pl').textContent=play?'Pause':'Play'};
+$('pl').onclick=()=>{if(!AV.length)return;if(T>=1)T=0;play=!play;$('pl').textContent=play?'Pause':'Play'};
 $('rs').onclick=()=>{T=0;play=0;$('pl').textContent='Play';frame()};
 $('tl').oninput=e=>{T=e.target.value/1000;play=0;$('pl').textContent='Play';frame()};
-$('go').onclick=async()=>{if(!$('o').value.trim()||!$('d').value.trim()){$('st').textContent='Enter both addresses first.';return}$('st').textContent='Looking up addresses…';const[o,d]=await Promise.all([geocode($('o').value),geocode($('d').value)]);if(o)N.O.c=o;if(d)N.D.c=d;ex=!!(o&&d);for(const k in PC)if(k!=='GS')delete PC[k];$('st').textContent=(o&&d)?'Addresses found. Only the Macon → Atlanta corridor is researched, so other trips are not meaningful.':'Address lookup failed; keeping previous locations.';pick(sel)};
+$('go').onclick=async()=>{const oq=$('o').value.trim(),dq=$('d').value.trim();if(!oq||!dq){$('st').textContent='Enter both addresses first.';return}
+$('st').textContent='Looking up addresses…';play=0;$('pl').textContent='Play';
+const[o,d]=await Promise.all([geocode(oq),geocode(dq)]);
+if(!o||!d){$('st').textContent='Could not find '+(!o&&!d?'either address':!o?'the origin':'the destination')+'. Try adding city and state.';return}
+if(ready){map.getSource('rt').setData({type:'FeatureCollection',features:[]});nodeMk.forEach(m=>m.remove());nodeMk=[];mkr.remove()}
+N.O.c=o;N.D.c=d;for(const k in PC)if(k!=='GS')delete PC[k];ex=true;$('st').textContent='Finding the road route…';
+const od=await path('OD');if(!od.real){$('st').textContent='The routing service did not respond. Try again in a moment.';return}
+const mi=od.km*.621,mn=Math.max(5,Math.round(od.dur));
+R[0].seg[1]=['ride','O','D',mn,Math.round(mi*1.7),Math.round(mi*2.9),'e','Uber/Lyft, ~'+Math.round(mi)+' mi','OD'];
+R[3].seg[1]=['rental','O','D',mn,Math.round(mi*1),Math.round(mi*2.5),'u','Provider, location and one-way fee unverified','OD'];
+R.forEach(calc);
+const corridor=hv(o,N.M.c)<60&&hv(d,N.G.c)<70;AV=corridor?R.slice():[R[0],R[3]];
+note=corridor?'':'Bus and MARTA options are researched only for the Macon to Atlanta corridor, so only driving options are shown. ';
+score();pick(AV.slice().sort((a,b)=>b.score-a.score)[0])};
 /* geocode the default addresses once for exact points */
-(async()=>{for(const k of ['M']){const c=await geocode(N[k].q);if(c)N[k].c=c}for(const k in PC)if(k!=='GS')delete PC[k];if(ready)build()})();
+(async()=>{for(const k of ['M']){const c=await geocode(N[k].q);if(c)N[k].c=c}for(const k in PC)if(k!=='GS')delete PC[k];0})();
 refresh();
 </script></body></html>
