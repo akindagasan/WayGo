@@ -87,7 +87,12 @@ const norm=(v,f,inv)=>{const a=AV.map(f),mn=Math.min(...a),mx=Math.max(...a);ret
 function score(){const s=Object.values(wt).reduce((a,b)=>a+b,0)||1;AV.forEach(r=>{r.score=Math.round(100*(wt.cost*norm(r.mid,x=>x.mid,1)+wt.safety*norm(r.safe,x=>x.safe)+wt.time*norm(r.dur,x=>x.dur,1)+wt.transfers*norm(r.tr,x=>x.tr,1)+wt.conv*(.5*norm(r.walkM,x=>x.walkM,1)+.5*norm(r.wait,x=>x.wait,1)))/s)})}
 /* ---------- Geo ---------- */
 const PC={};let ex=false;
-async function geocode(q){try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));const j=await r.json();if(j[0])return[+j[0].lon,+j[0].lat]}catch(e){}return null}
+async function geocode(q){const parts=q.split(',').map(x=>x.trim()).filter(Boolean);
+const v=[[q,0],[q.replace(/\b\d{5}(-\d{4})?\b/,'').replace(/\s+,/g,',').trim(),0],[q.replace(/^\d+\s+/,''),1],[parts.slice(-2).join(', '),1]];
+for(const[x,ap]of v){if(!x)continue;
+try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q='+encodeURIComponent(x));if(r.ok){const j=await r.json();if(j[0]){const c=[+j[0].lon,+j[0].lat];c.ap=ap;return c}}}catch(e){}
+try{const r=await fetch('https://photon.komoot.io/api/?limit=1&q='+encodeURIComponent(x));if(r.ok){const j=await r.json(),f=j.features&&j.features[0];if(f){const c=f.geometry.coordinates.slice();c.ap=ap;return c}}}catch(e){}}
+return null}
 async function road(a,b){try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a[0]},${a[1]};${b[0]},${b[1]}?overview=full&geometries=geojson`);const j=await r.json();if(j.routes&&j.routes[0])return{c:j.routes[0].geometry.coordinates,real:true,dur:j.routes[0].duration/60,km:j.routes[0].distance/1000}}catch(e){}return{c:[a,b],real:false}}
 async function path(k){if(PC[k])return PC[k];if(k==='GS')return PC[k]={c:RED,real:false,rail:true};const[a,b]=ROAD[k];return PC[k]=await road(N[a].c,N[b].c)}
 const hv=(p,q)=>{const R_=6371,r=Math.PI/180,dl=(q[1]-p[1])*r,dn=(q[0]-p[0])*r,a=Math.sin(dl/2)**2+Math.cos(p[1]*r)*Math.cos(q[1]*r)*Math.sin(dn/2)**2;return 2*R_*Math.asin(Math.sqrt(a))};
@@ -137,7 +142,7 @@ $('tl').oninput=e=>{T=e.target.value/1000;play=0;$('pl').textContent='Play';fram
 $('go').onclick=async()=>{const oq=$('o').value.trim(),dq=$('d').value.trim();if(!oq||!dq){$('st').textContent='Enter both addresses first.';return}
 $('st').textContent='Looking up addresses…';play=0;$('pl').textContent='Play';
 const[o,d]=await Promise.all([geocode(oq),geocode(dq)]);
-if(!o||!d){$('st').textContent='Could not find '+(!o&&!d?'either address':!o?'the origin':'the destination')+'. Try adding city and state.';return}
+if(!o||!d){$('st').textContent='Could not find '+(!o&&!d?'either address':!o?'the origin':'the destination')+'. Include city and state, for example "123 Main St, Macon, GA". If it keeps failing, your network may be blocking the map services.';return}
 if(ready){map.getSource('rt').setData({type:'FeatureCollection',features:[]});nodeMk.forEach(m=>m.remove());nodeMk=[];mkr.remove()}
 N.O.c=o;N.D.c=d;for(const k in PC)if(k!=='GS')delete PC[k];ex=true;$('st').textContent='Finding the road route…';
 const od=await path('OD');if(!od.real){$('st').textContent='The routing service did not respond. Try again in a moment.';return}
@@ -146,7 +151,7 @@ R[0].seg[1]=['ride','O','D',mn,Math.round(mi*1.7),Math.round(mi*2.9),'e','Uber/L
 R[3].seg[1]=['rental','O','D',mn,Math.round(mi*1),Math.round(mi*2.5),'u','Provider, location and one-way fee unverified','OD'];
 R.forEach(calc);
 const corridor=hv(o,N.M.c)<60&&hv(d,N.G.c)<70;AV=corridor?R.slice():[R[0],R[3]];
-note=corridor?'':'Bus and MARTA options are researched only for the Macon to Atlanta corridor, so only driving options are shown. ';
+note=(corridor?'':'Bus and MARTA options are researched only for the Macon to Atlanta corridor, so only driving options are shown. ')+((o.ap||d.ap)?'Address match is approximate (street or city level). ':'');
 score();pick(AV.slice().sort((a,b)=>b.score-a.score)[0])};
 /* geocode the default addresses once for exact points */
 (async()=>{for(const k of ['M']){const c=await geocode(N[k].q);if(c)N[k].c=c}for(const k in PC)if(k!=='GS')delete PC[k];0})();
